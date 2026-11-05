@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#08090d">
+<title>今日已赚</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#08090d; --card:#12141c; --line:rgba(255,255,255,.07);
+  --fg:#eef1f7; --dim:#6b7285; --gold:#ffd479; --green:#3ddc97;
+}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+  display:flex; align-items:center; justify-content:center;
+  padding:24px 18px; overflow:hidden;
+}
+body::before{
+  content:""; position:fixed; inset:-30%;
+  background:radial-gradient(circle at 50% 22%,rgba(255,212,121,.11),transparent 58%),
+             radial-gradient(circle at 50% 92%,rgba(61,220,151,.08),transparent 55%);
+  pointer-events:none; transition:opacity .8s;
+}
+body.rest::before{opacity:.28}
+.wrap{position:relative;width:100%;max-width:460px;text-align:center}
+.status{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:12px;letter-spacing:.14em;color:var(--dim);
+  padding:7px 15px;border:1px solid var(--line);border-radius:999px;
+  margin-bottom:30px;text-transform:uppercase;
+}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+.status.rest .dot{background:#8b6a2a;box-shadow:none}
+.status.rest{color:#8b7a5a}
+.label{font-size:12px;letter-spacing:.28em;color:var(--dim);margin-bottom:16px}
+.amount{
+  font-variant-numeric:tabular-nums; font-feature-settings:"tnum";
+  font-size:clamp(46px,15vw,66px); font-weight:600; letter-spacing:-.03em;
+  line-height:1; display:flex;align-items:baseline;justify-content:center;gap:2px;
+  text-shadow:0 0 40px rgba(255,212,121,.28);
+}
+.amount .sym{font-size:.42em;color:var(--gold);font-weight:500;margin-right:4px;opacity:.85}
+.amount .frac{font-size:.42em;color:var(--gold);opacity:.62;font-weight:500;margin-left:3px}
+.amount.frozen{color:#6b7285;text-shadow:none}
+.amount.frozen .sym,.amount.frozen .frac{color:#4b5262}
+.bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;margin:30px 0 10px;overflow:hidden}
+.bar-fill{height:100%;width:0;border-radius:2px;background:linear-gradient(90deg,#ffd479,#3ddc97);transition:width .9s cubic-bezier(.2,.7,.2,1)}
+.sub{font-size:12px;color:var(--dim);letter-spacing:.04em;height:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:34px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:15px 16px;text-align:left}
+.card .k{font-size:11px;color:var(--dim);letter-spacing:.14em;margin-bottom:7px}
+.card .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.card .v small{font-size:12px;color:var(--dim);font-weight:400;margin-left:2px}
+.tools{margin-top:26px;display:flex;gap:9px;justify-content:center}
+.tools button{
+  background:transparent;border:1px solid var(--line);color:var(--dim);
+  font-size:12px;padding:9px 18px;border-radius:999px;cursor:pointer;
+  font-family:inherit;letter-spacing:.06em;transition:.2s;
+}
+.tools button:hover{color:var(--fg);border-color:rgba(255,255,255,.24)}
+/* settings */
+.sheet{
+  position:fixed;inset:0;background:rgba(4,5,8,.72);backdrop-filter:blur(14px);
+  display:none;align-items:flex-end;justify-content:center;z-index:50;
+}
+.sheet.open{display:flex}
+.panel{
+  width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
+  background:#0f1117;border:1px solid var(--line);border-bottom:0;
+  border-radius:20px 20px 0 0;padding:22px 20px 30px;
+}
+.panel h3{font-size:15px;font-weight:600;margin-bottom:18px;letter-spacing:.05em}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.row label{font-size:13px;color:#aab2c2}
+.row input{
+  background:#191c25;border:1px solid var(--line);color:var(--fg);
+  border-radius:9px;padding:8px 11px;font-size:13px;font-family:inherit;
+  font-variant-numeric:tabular-nums;width:118px;text-align:right;outline:none;
+}
+.row input:focus{border-color:var(--gold)}
+.row input[type=time]{width:96px;text-align:center}
+.sec-title{font-size:11px;color:var(--dim);letter-spacing:.16em;margin:24px 0 8px}
+textarea{
+  width:100%;height:170px;background:#191c25;border:1px solid var(--line);
+  color:#c9d1e0;border-radius:11px;padding:12px;font-size:12px;line-height:1.9;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;outline:none;
+}
+textarea:focus{border-color:var(--gold)}
+.hint{font-size:11px;color:#5c6474;margin-top:8px;line-height:1.7}
+.actions{display:flex;gap:10px;margin-top:22px}
+.actions button{
+  flex:1;padding:13px;border-radius:12px;font-size:14px;font-family:inherit;
+  cursor:pointer;border:1px solid var(--line);background:transparent;color:#aab2c2;letter-spacing:.05em;
+}
+.actions .primary{background:var(--gold);color:#1a1508;border-color:var(--gold);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="status" id="status"><span class="dot"></span><span id="statusText">工作中</span></div>
+  <div class="label">今日已赚</div>
+  <div class="amount" id="amount">
+    <span class="sym">¥</span><span id="int">0</span><span id="dec2">.00</span><span class="frac" id="dec4">00</span>
+  </div>
+  <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+  <div class="sub" id="sub"></div>
+  <div class="grid">
+    <div class="card"><div class="k">本月累计</div><div class="v" id="month">—</div></div>
+    <div class="card"><div class="k">本年累计</div><div class="v" id="year">—</div></div>
+    <div class="card"><div class="k">折算时薪</div><div class="v" id="hourly">—</div></div>
+    <div class="card"><div class="k">每秒入账</div><div class="v" id="perSec">—</div></div>
+  </div>
+  <div class="tools"><button id="cfgBtn">设置</button></div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="panel">
+    <h3>参数设置</h3>
+    <div class="row"><label>税后月薪</label><input id="iSalary" type="number" step="100"></div>
+    <div class="row"><label>上班时间</label><input id="iStart" type="time"></div>
+    <div class="row"><label>下班时间</label><input id="iEnd" type="time"></div>
+    <div class="row"><label>午休开始</label><input id="iBS" type="time"></div>
+    <div class="row"><label>午休结束</label><input id="iBE" type="time"></div>
+    <div class="sec-title">放假时段（每行一条：名称,开始,结束）</div>
+    <textarea id="iHolidays" spellcheck="false"></textarea>
+    <div class="hint">周末自动视为休息。寒暑假、法定节假日都写在这里。日期格式 2027-01-25。<br>补班日（周末要上班）另起一行写：补班,2026-12-26,2026-12-26</div>
+    <div class="actions">
+      <button id="cancelBtn">取消</button>
+      <button id="saveBtn" class="primary">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY='money_ticker_cfg_v1';
+const DEFAULT={
+  salary:10900,
+  workStart:'08:00', workEnd:'17:00',
+  breakStart:'12:00', breakEnd:'13:00',
+  holidays:[
+    ['元旦','2026-01-01','2026-01-03'],
+    ['春节','2026-02-15','2026-02-21'],
+    ['清明','2026-04-04','2026-04-06'],
+    ['五一','2026-05-01','2026-05-05'],
+    ['端午','2026-06-19','2026-06-21'],
+    ['暑假','2026-07-13','2026-08-31'],
+    ['中秋','2026-09-25','2026-09-27'],
+    ['国庆','2026-10-01','2026-10-07'],
+    ['元旦','2027-01-01','2027-01-03'],
+    ['寒假','2027-01-25','2027-02-21'],
+    ['春节','2027-02-05','2027-02-12'],
+    ['清明','2027-04-04','2027-04-06'],
+    ['五一','2027-05-01','2027-05-05'],
+    ['端午','2027-06-09','2027-06-11'],
+    ['暑假','2027-07-12','2027-08-31'],
+    ['中秋','2027-09-15','2027-09-17'],
+    ['国庆','2027-10-01','2027-10-07']
+  ],
+  extraWork:[]
+};
+let cfg=load();
+
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(!raw) return structuredClone(DEFAULT);
+    const o=JSON.parse(raw);
+    return Object.assign(structuredClone(DEFAULT),o);
+  }catch(e){return structuredClone(DEFAULT);}
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(cfg));}
+
+function parseHM(s){const[a,b]=s.split(':').map(Number);return a*60+b;}
+function dayKey(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function isWorkday(d){
+  const k=dayKey(d);
+  if(cfg.extraWork.some(e=>k>=e[1]&&k<=e[2])) return true;
+  const dow=d.getDay();
+  if(dow===0||dow===6) return false;
+  return !cfg.holidays.some(h=>k>=h[1]&&k<=h[2]);
+}
+// 一天的工作秒段，单位：当天秒数
+function segments(){
+  const ws=parseHM(cfg.workStart)*60, we=parseHM(cfg.workEnd)*60;
+  const bs=parseHM(cfg.breakStart)*60, be=parseHM(cfg.breakEnd)*60;
+  if(be>bs && bs>ws && be<we) return [[ws,bs],[be,we]];
+  return [[ws,we]];
+}
+function fullDaySeconds(){return segments().reduce((a,s)=>a+(s[1]-s[0]),0);}
+function paidSecondsInDay(d,curSec){
+  if(!isWorkday(d)) return 0;
+  const cur = (curSec==null)? Infinity : curSec;
+  let t=0;
+  for(const [a,b] of segments()) t += Math.max(0, Math.min(cur,b)-a);
+  return t;
+}
+function yearSeconds(year){
+  let total=0; const d=new Date(year,0,1);
+  while(d.getFullYear()===year){
+    total+=paidSecondsInDay(new Date(d),null);
+    d.setDate(d.getDate()+1);
+  }
+  return total;
+}
+let cache={year:null,secs:0};
+function perSecond(){
+  const y=new Date().getFullYear();
+  if(cache.year!==y){cache.year=y;cache.secs=yearSeconds(y)||1;}
+  return (cfg.salary*12)/cache.secs;
+}
+function nowSecOfDay(d){return d.getHours()*3600+d.getMinutes()*60+d.getSeconds()+d.getMilliseconds()/1000;}
+
+function monthEarned(now){
+  const ps=perSecond(); let total=0;
+  const today0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const d=new Date(now.getFullYear(),now.getMonth(),1);
+  while(d.getMonth()===now.getMonth()){
+    if(d>today0) break;
+    const isToday=dayKey(d)===dayKey(now);
+    total+=paidSecondsInDay(new Date(d), isToday?nowSecOfDay(now):null)*ps;
+    d.setDate(d.getDate()+1);
+  }
+  return total;
+}
+function yearEarned(now){
+  const ps=perSecond(); let total=0;
+  const today0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const d=new Date(now.getFullYear(),0,1);
+  while(d.getFullYear()===now.getFullYear()){
+    if(d>today0) break;
+    const isToday=dayKey(d)===dayKey(now);
+    total+=paidSecondsInDay(new Date(d), isToday?nowSecOfDay(now):null)*ps;
+    d.setDate(d.getDate()+1);
+  }
+  return total;
+}
+function money(n,dec=2){
+  return n.toLocaleString('zh-CN',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+}
+function setEl(id,v){const e=document.getElementById(id); if(e.textContent!==v) e.textContent=v;}
+
+let lastMonth='',lastYear='';
+function tick(){
+  const now=new Date();
+  const ps=perSecond();
+  const todaySec=paidSecondsInDay(now, nowSecOfDay(now));
+  const earned=todaySec*ps;
+
+  const v=earned.toFixed(4);
+  const [ip,fp]=v.split('.');
+  setEl('int', Number(ip).toLocaleString('zh-CN'));
+  setEl('dec2','.'+fp.slice(0,2));
+  setEl('dec4',fp.slice(2));
+
+  const full=fullDaySeconds();
+  const pct = full? Math.min(100, todaySec/full*100) : 0;
+  document.getElementById('barFill').style.width=pct.toFixed(1)+'%';
+
+  // status
+  const workday=isWorkday(now);
+  const s=nowSecOfDay(now), segs=segments();
+  const inWork = workday && segs.some(([a,b])=>s>=a&&s<b);
+  const doneWork = workday && s>=segs[segs.length-1][1];
+  const st=document.getElementById('status'), stt=document.getElementById('statusText');
+  const amountEl=document.getElementById('amount');
+  document.body.classList.toggle('rest', !inWork);
+  st.classList.toggle('rest', !inWork);
+  amountEl.classList.toggle('frozen', !inWork);
+
+  if(!workday){
+    stt.textContent='休息日 · 不产钱';
+  }else if(inWork){
+    stt.textContent='正在赚钱';
+  }else if(doneWork){
+    stt.textContent='今日收工';
+  }else if(s<segs[0][0]){
+    const left=segs[0][0]-s;
+    stt.textContent='距开工 '+(left>=3600?Math.floor(left/3600)+'小时'+Math.round(left%3600/60)+'分':Math.round(left/60)+'分钟');
+  }else{
+    const nb=segs.find(([a,b])=>s<b);
+    stt.textContent= nb? '午休中 · '+(nb[0]-s>=60?Math.round((nb[0]-s)/60)+'分钟后复工':'马上复工') : '午休中';
+  }
+
+  // sub
+  let sub='';
+  if(inWork){
+    const remain=full-todaySec;
+    sub=`今日还能赚 ¥${money(remain*ps,0)} · 进度 ${pct.toFixed(0)}%`;
+  }else if(doneWork){
+    sub=`今天全部到手 ¥${money(full*ps,0)}`;
+  }else if(!workday){
+    sub='好好休息，钱明天再来';
+  }else{
+    sub=`今日一天值 ¥${money(full*ps,0)}`;
+  }
+  setEl('sub',sub);
+
+  // cards
+  const mk=now.getFullYear()+'-'+now.getMonth();
+  if(mk!==lastMonth){lastMonth=mk; setEl('month', money(monthEarned(now),0));}
+  document.getElementById('month').textContent=money(monthEarned(now),0);
+  setEl('year', money(yearEarned(now),0));
+  setEl('hourly', money(ps*3600,1));
+  setEl('perSec', ps.toFixed(4));
+}
+function loop(){tick(); requestAnimationFrame(loop);}
+
+// settings
+const sheet=document.getElementById('sheet');
+document.getElementById('cfgBtn').onclick=()=>{
+  document.getElementById('iSalary').value=cfg.salary;
+  document.getElementById('iStart').value=cfg.workStart;
+  document.getElementById('iEnd').value=cfg.workEnd;
+  document.getElementById('iBS').value=cfg.breakStart;
+  document.getElementById('iBE').value=cfg.breakEnd;
+  document.getElementById('iHolidays').value=cfg.holidays.map(h=>h.join(',')).join('\n');
+  sheet.classList.add('open');
+};
+document.getElementById('cancelBtn').onclick=()=>sheet.classList.remove('open');
+sheet.onclick=(e)=>{if(e.target===sheet) sheet.classList.remove('open');};
+document.getElementById('saveBtn').onclick=()=>{
+  const g=id=>document.getElementById(id);
+  cfg.salary=Number(g('iSalary').value)||10900;
+  cfg.workStart=g('iStart').value||'08:00';
+  cfg.workEnd=g('iEnd').value||'17:00';
+  cfg.breakStart=g('iBS').value||'12:00';
+  cfg.breakEnd=g('iBE').value||'13:00';
+  const hol=[],extra=[];
+  g('iHolidays').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach(line=>{
+    const p=line.split(',').map(x=>x.trim());
+    if(p.length<3) return;
+    if(p[0].includes('补班')) extra.push([p[0],p[1],p[2]]);
+    else hol.push([p[0],p[1],p[2]]);
+  });
+  cfg.holidays=hol; cfg.extraWork=extra;
+  cache.year=null;
+  save(); sheet.classList.remove('open'); tick();
+};
+loop();
+</script>
+</body>
+</html>
